@@ -3,6 +3,7 @@
 
 Como almacenamiento para los datos del proyecto hacemos uso de S3 en AWS, los recursos necesarios son provisionados y configurados haciendo uso de AWS CDK, una herramienta de Infraestructura como código que permite desplegar y administrar recursos en esta plataforma usando un CLI y definirla en un lenguaje de programación de alto nivel.
 
+## Despliegue
 
 <details>
 
@@ -49,3 +50,41 @@ cdk destroy
 ```
 
 </details>
+
+## Configuración DVC
+
+Una vez se despliegue el bucker y el usuario para utilizarlo, puede configurar su ambiente para usar las credenciales de dicho usuario.
+
+> Para usar DVC con S3, primero [instalar el CLI de AWS](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html). 
+
+Desde la cuenta en la que creó el usuario en AWS para acceder al bucket de S3, genere unas llaves de acceso para configurar las credenciales en su ambiente local.
+
+> [!NOTE]
+> El uso de la cadena `cloud_remote` en los siguientes comandos hace referencia al nombre con el que se configuró el remoto de dvc en el proyecto.
+
+Puede agregar estas credenciales a su archivo de credenciales de AWS, el cuál típicamente se encuentra en `~/.aws/credentials` 
+
+```
+[dvc]
+aws_access_key_id = ...
+aws_secret_access_key = ...
+```
+
+Y luego indicarle a dvc que use estas credenciales con los siguientes comandos:
+
+```
+$ dvc remote modify --local cloud_remote \
+                    credentialpath 'path/to/credentials'
+$ dvc remote modify cloud_remote profile 'dvc'
+```
+
+O bien, configurar directamente dvc con su access_key y su secret_access_key
+
+```
+$ dvc remote modify --local cloud_remote \
+                    access_key_id 'mysecret'
+$ dvc remote modify --local cloud_remote \
+                    secret_access_key 'mysecret'
+```
+
+Luego de completar estos pasos está listo para descargar el archivo de datos con `dvc push`
