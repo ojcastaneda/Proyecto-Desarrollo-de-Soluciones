@@ -1,0 +1,4 @@
+[core]
+    remote = cloud_remote
+['remote "cloud_remote"']
+    url = s3://maia-202511-g5-dvc-storage-bucket
