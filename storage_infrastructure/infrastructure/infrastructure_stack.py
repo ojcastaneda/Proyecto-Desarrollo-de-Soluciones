@@ -29,10 +29,14 @@ class StorageStack(cdk.Stack):
                 effect=iam.Effect.ALLOW,
                 actions=[
                     "s3:ListBucket",
+                    "s3:HeadObject",
                     "s3:GetObject",
                     "s3:PutObject",
                     "s3:DeleteObject",
                 ],
-                resources=[bucket.bucket_arn + "/*"],
+                resources=[
+                    bucket.bucket_arn + "/*",
+                    bucket.bucket_arn,
+                ],
             )
         )
