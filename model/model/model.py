@@ -54,6 +54,47 @@ class Preprocessor(BaseEstimator, TransformerMixin):
             if self.include_bias:
                 columns.append(bias_column)
         x.drop(columns=[col for col in x if col not in columns], inplace=True)
+        x.replace(
+            {
+                "OcupacionEconomica": {"   ": "<No Registra>"},
+                "Posee Cónyuge o Compañero(a)?": {"<No Registra>": "<No Aplica>"},
+                "Línea de FpT para el Máx. Nivel": {"<No Registra>": "<No Aplica>"},
+                "Máximo Nivel FpT Reportado": {
+                    "Técnico Laboral": "Técnico",
+                    "Técnico Profesional": "Técnico",
+                    "Técnico Laboral por Competencias": "Técnico",
+                    "Especialización Técnica": "Técnico",
+                    "Especialización Tecnológica": "Tecnológico",
+                    "Operario": "Otro",
+                    "Auxiliar": "Otro",
+                    "Certificación por Evaluación de Competencias": "Otro",
+                },
+                "Grupo Etario": {
+                    "Entre 18 y 25 años": "Entre 18 y 40 años",
+                    "Entre 26 y 40 años": "Entre 18 y 40 años",
+                },
+                "Régimen de tenencia Vivienda": {
+                    "Propia, totalmente pagada": "Propia",
+                    "Propia, la están pagando": "Propia",
+                    "Sana posesión con título": "Propia",
+                    "Es usufructo": "Con permiso del propietario, sin pago alguno",
+                    "Familiar": "Con permiso del propietario, sin pago alguno",
+                    "Posesión sin título (ocupante de hecho) o propiedad colectiva": "Otra",
+                    "Otra forma de tenencia  (posesión sin título, ocupante de hecho, propiedad colectiva, etc)": "Otra",
+                },
+                "Tipo de Vivienda": {
+                    "Casa-Lote": "Casa",
+                    "Cuarto(s)": "Habitación",
+                    "Rancho": "Finca",
+                    "Vivienda (casa) indígena": "Casa",
+                    "Otro tipo de vivienda (carpa, tienda, vagón, embarcación, cueva, refugio natural, puente, calle, etc.)": "Otro",
+                },
+                "N° de Hijos": {-2: -1},
+            },
+            inplace=True,
+        )
+        if self.include_all:
+            x["Sexo"] = x["Sexo"].str.upper()
         return x
 
 
