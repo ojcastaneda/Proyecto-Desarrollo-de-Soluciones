@@ -169,3 +169,17 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+/data/*
+!/data/*.dvc
+
+/training/*
+!/training/*.dvc
+!/training/*.ipynb
+
+*.swp
+package-lock.json
+
+# CDK asset staging directory
+.cdk.staging
+cdk.out
