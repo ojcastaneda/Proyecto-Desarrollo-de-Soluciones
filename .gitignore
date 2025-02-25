@@ -180,6 +180,10 @@ cython_debug/
 *.swp
 package-lock.json
 
-# CDK asset staging directory
+### CDK-specific ignores ###
+*.swp
+cdk.context.json
+package-lock.json
+yarn.lock
 .cdk.staging
 cdk.out
