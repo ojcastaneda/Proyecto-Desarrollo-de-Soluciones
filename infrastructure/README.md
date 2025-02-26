@@ -23,7 +23,7 @@ Una vez se cuente con dichos prerequisitos, la documentación recomienda instala
 npm install -g aws-cdk
 ```
 
-Luego, ubicado en la carpeta `./storage_infrastructure` del proyecto, necesita el siguiente comando para desplegar una serie de recursos en su cuenta de AWS que soportan el CDK. Por defecto se utilizarán las credenciales configuradas en el perfil `default` para el CLI de AWS.
+Luego, ubicado en la carpeta `./infrastructure` del proyecto, necesita el siguiente comando para desplegar una serie de recursos en su cuenta de AWS que soportan el CDK. Por defecto se utilizarán las credenciales configuradas en el perfil `default` para el CLI de AWS.
 
 ```
 cdk bootstrap
@@ -38,7 +38,7 @@ cdk synth
 Finalmente, para desplegar esta infraestructura haga uso del siguiente comando:
 
 ```
-cdk deploy
+cdk deploy StorageStack
 ```
 
 Es posible que en la terminal se le solicite confirmación para desplegar estos recursos ya que incluyen permisos sobre los mismos.
