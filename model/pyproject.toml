@@ -4,9 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "model"
-version = "1.0.2"
+version = "1.0.3"
 description = ""
 dependencies = [
+    "aif360==0.6.1",
     "joblib==1.4.2",
     "lime==0.2.0.1",
     "matplotlib==3.10.0",
