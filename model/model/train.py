@@ -1,6 +1,8 @@
+from .analyze import generate_bias_detection_datasets
 from .model import Preprocessor, split_dataset
+from aif360.algorithms.preprocessing import Reweighing
 from pandas import read_csv, DataFrame, Series
-from sklearn.base import BaseEstimator
+from sklearn.base import BaseEstimator, clone
 from sklearn.compose import ColumnTransformer, make_column_selector
 from sklearn.metrics import classification_report
 from sklearn.model_selection import train_test_split, GridSearchCV
@@ -53,6 +55,15 @@ def grid_report(grid: GridSearchCV, dataset: DataFrame, experiment: str):
     return pipeline
 
 
+def test_report_umbral(
+    pipeline: Pipeline, dataset: DataFrame, umbral: float, experiment
+):
+    x, y = split_dataset(dataset)
+    report(
+        pipeline, (pipeline.predict_proba(x)[:, 1] >= umbral).astype(int), y, experiment
+    )
+
+
 def cross_validation(
     additional_layers: list[tuple[str, BaseEstimator]],
     dataset: DataFrame,
@@ -100,3 +111,39 @@ def dataset_cleanup(dataset: DataFrame):
     )
     dataset.drop(index=dataset[~conditions].index, inplace=True)
 
+
+def train_unbiased_model(
+    pipeline: Pipeline,
+    train_dataset: DataFrame,
+    test_dataset: DataFrame,
+    experiment: str,
+):
+    x, y = split_dataset(train_dataset)
+    unbiased_pipeline = Pipeline(clone(pipeline).steps[:-1])
+    unbiased_pipeline.fit(x, y)
+    balanced_train, _, feature_names = generate_bias_detection_datasets(
+        unbiased_pipeline, train_dataset, test_dataset, ["Sexo", "Grupo Etario"]
+    )
+    sex_bias_fixer = Reweighing([{"Sexo_MASCULINO": 1}], [{"Sexo_MASCULINO": 0}])
+    balanced_train = sex_bias_fixer.fit_transform(balanced_train)
+    age_bias_fixer = Reweighing(
+        [{"Grupo Etario_Entre 18 y 40 años": 1}],
+        [{"Grupo Etario_Entre 41 y 60 años": 1}, {"Grupo Etario_Mayor de 60 años": 1}],
+    )
+    balanced_train = age_bias_fixer.fit_transform(balanced_train)
+    target = balanced_train.labels
+    balanced_train = DataFrame(
+        balanced_train.features, columns=balanced_train.feature_names
+    )
+    extra_columns = [
+        col
+        for col in feature_names
+        if col not in unbiased_pipeline[-1].get_feature_names_out()
+    ]
+    balanced_train.drop(extra_columns, axis=1, inplace=True)
+    model = clone(pipeline.steps[-1][1])
+    model.fit(balanced_train.values, target)
+    unbiased_pipeline.steps.append((pipeline.steps[-1][0], model))
+    x, y = split_dataset(test_dataset)
+    report(pipeline, pipeline.predict(x), y, experiment)
+    return unbiased_pipeline

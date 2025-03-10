@@ -1,10 +1,13 @@
+from aif360.datasets import BinaryLabelDataset
+from aif360.metrics import ClassificationMetric
 from lime.lime_tabular import LimeTabularExplainer
 from matplotlib.pyplot import close, figure
 from pandas import DataFrame
 from pathlib import Path
 from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder
 from sklearn.tree import plot_tree
-from .model import split_dataset
+from .model import Preprocessor, split_dataset, target_column
 
 
 def check_folder(folder):
@@ -50,3 +53,74 @@ def print_tree(pipeline: Pipeline, test_dataset: DataFrame, output_folder: str):
     )
     tree_figure.savefig(path.joinpath("tree.png"))
     close()
+
+
+def detect_dataset_bias(
+    pipeline: Pipeline,
+    dataset: DataFrame,
+    variables: list[str],
+    one_hot: OneHotEncoder | None = None,
+):
+    x, y = split_dataset(dataset)
+    preprocessor = Preprocessor(True, False)
+    feature_names = pipeline[-1].get_feature_names_out()
+    variables_data = preprocessor.transform(x).reset_index(drop=True)[variables]
+    transformed = DataFrame(pipeline.transform(x).todense(), columns=feature_names)
+    transformed[target_column] = y.reset_index(drop=True)
+    if one_hot is None:
+        one_hot = OneHotEncoder(handle_unknown="ignore", drop="if_binary")
+        one_hot.fit(variables_data)
+    protected = one_hot.get_feature_names_out()
+    variables_data = DataFrame(
+        one_hot.transform(variables_data).todense(), columns=protected
+    )
+    missing_columns = variables_data.columns.difference(transformed.columns)
+    return (
+        BinaryLabelDataset(
+            df=transformed.join(variables_data[missing_columns]),
+            label_names=[target_column],
+            protected_attribute_names=protected,
+        ),
+        one_hot,
+    )
+
+
+def generate_bias_detection_datasets(
+    pipeline: Pipeline,
+    train_dataset: DataFrame,
+    test_dataset: DataFrame,
+    variables: list[str],
+):
+    balanced_train, one_hot = detect_dataset_bias(pipeline, train_dataset, variables)
+    balanced_test, _ = detect_dataset_bias(pipeline, test_dataset, variables, one_hot)
+    return balanced_train, balanced_test, one_hot.get_feature_names_out()
+
+
+def check_bias(
+    pipeline: Pipeline,
+    train_dataset: DataFrame,
+    test_dataset: DataFrame,
+    variables: list[str],
+):
+    x, _ = split_dataset(test_dataset)
+    for variable in variables:
+        _, balanced_test, feature_names = generate_bias_detection_datasets(
+            pipeline[:-1], train_dataset, test_dataset, [variable]
+        )
+        labeled_test = balanced_test.copy()
+        labeled_test.labels = pipeline.predict(x)
+        for name in feature_names:
+            metric_test = ClassificationMetric(
+                balanced_test,
+                labeled_test,
+                privileged_groups=[{name: 1}],
+                unprivileged_groups=[{name: 0}],
+            )
+            print(
+                f"{name} | Statistical Parity Difference: ",
+                metric_test.statistical_parity_difference(),
+            )
+            print(
+                f"{name} | Equal Opportunity Difference: ",
+                metric_test.equal_opportunity_difference(),
+            )
