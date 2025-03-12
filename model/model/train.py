@@ -145,5 +145,5 @@ def train_unbiased_model(
     model.fit(balanced_train.values, target)
     unbiased_pipeline.steps.append((pipeline.steps[-1][0], model))
     x, y = split_dataset(test_dataset)
-    report(pipeline, pipeline.predict(x), y, experiment)
+    report(unbiased_pipeline, unbiased_pipeline.predict(x), y, experiment)
     return unbiased_pipeline
